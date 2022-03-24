@@ -24,6 +24,10 @@ import java.util.Objects;
 @Controller
 public class HomeController {
     private Configuration configuration = new Configuration(Configuration.VERSION_2_3_23);
+    public static final String GETPLAYERS = "https://www.balldontlie.io/api/v1/players/?search=";
+    public static final String GETPLAYERSSTATS2020 = "https://www.balldontlie.io/api/v1/season_averages?season=2020&player_ids[]=";
+    public static final String GETPLAYERSSTATS2019 = "https://www.balldontlie.io/api/v1/season_averages?season=2019&player_ids[]=";
+
 
     @GetMapping("/")    // home page
     public String home() throws IOException {
@@ -35,9 +39,9 @@ public class HomeController {
     public @ResponseBody
     String home(@RequestParam String name, @RequestParam String surname) throws Exception {
         Map<String, Object> model = new HashMap<>();
-        URL urlToGetData = new URL(String.format("https://www.balldontlie.io/api/v1/players/?search=" + name));
 
-
+        // getting player data
+        URL urlToGetData = new URL(String.format(GETPLAYERS + name));
         String dataString = sendRequest(urlToGetData);
         JsonElement jsonElement = processJons(dataString).getAsJsonObject().get("data");
         JsonArray arr = jsonElement.getAsJsonArray();
@@ -45,7 +49,6 @@ public class HomeController {
         surname = "\"" + surname + "\"";
         boolean exists = false;
         JsonObject playerObject = null;
-
         for(JsonElement el : arr){
             JsonObject obj = el.getAsJsonObject();
 
@@ -70,32 +73,34 @@ public class HomeController {
             model.put("height_feet", playerObject.get("height_feet"));
             model.put("height_inches", playerObject.get("height_inches"));
             String id = String.valueOf(playerObject.get("id"));
-            System.out.println(id);
-            URL urlGetStats = new URL(String.format("https://www.balldontlie.io/api/v1/season_averages?season=2020&player_ids[]=" + id));
-            JsonArray statsArr = processJons(sendRequest(urlGetStats)).getAsJsonObject().get("data").getAsJsonArray();
-            JsonObject statsObj = statsArr.get(0).getAsJsonObject();
-            String pts = String.valueOf(statsObj.get("pts"));
-            String ast = String.valueOf(statsObj.get("ast"));
-            String reb = String.valueOf(statsObj.get("reb"));
 
-            model.put("pts", statsObj.get("pts"));
-            model.put("ast", statsObj.get("ast"));
-            model.put("reb", statsObj.get("reb"));
+            PlayerThread t1 = new PlayerThread(id, "https://www.balldontlie.io/api/v1/season_averages?season=2020&player_ids[]=");
+            PlayerThread t2 = new PlayerThread(id, "https://www.balldontlie.io/api/v1/season_averages?season=2019&player_ids[]=");
+            t1.start();
+            t2.start();
+            t1.join();
+            t2.join();
+            String pts1 = t1.getPts();
+            String ast1 = t1.getAst();
+            String reb1 = t1.getReb();
+            String pts2 = t2.getPts();
+            String ast2 = t2.getAst();
+            String reb2 = t2.getReb();
+            model.put("pts", pts1);
+            model.put("ast", ast1);
+            model.put("reb", reb1);
 
-            URL urlGetPreviousStats = new URL(String.format("https://www.balldontlie.io/api/v1/season_averages?season=2019&player_ids[]=" + id));
-            JsonArray statsPreviousArr = processJons(sendRequest(urlGetPreviousStats)).getAsJsonObject().get("data").getAsJsonArray();
-            JsonObject statsPrevObj = statsPreviousArr.get(0).getAsJsonObject();
-            String pts2 = String.valueOf(statsPrevObj.get("pts"));
-            String ast2 = String.valueOf(statsPrevObj.get("ast"));
-            String reb2 = String.valueOf(statsPrevObj.get("reb"));
+
+            // Comaprison :
+
             String res = "Comparison = ";
-            if(Float.parseFloat(pts) > Float.parseFloat(pts2)){
+            if(Float.parseFloat(pts1) > Float.parseFloat(pts2)){
                 res += "has better points ";
             }
-            if(Float.parseFloat(ast) > Float.parseFloat(ast2)){
+            if(Float.parseFloat(ast1) > Float.parseFloat(ast2)){
                 res += "has better assists ";
             }
-            if(Float.parseFloat(reb) > Float.parseFloat(reb2)){
+            if(Float.parseFloat(reb1) > Float.parseFloat(reb2)){
                 res += "has better rebounds";
             }
             if(res.equals("Comparison = ")){
@@ -119,12 +124,13 @@ public class HomeController {
         }
     }
 
-    private JsonElement processJons(String data) {
+    public static JsonElement processJons(String data) {
         JsonElement jElem = new Gson().fromJson(data, JsonElement.class);
         return jElem;
     }
 
-    private String sendRequest(URL url) throws IOException {    // https://reqbin.com/req/java/5nqtoxbx/get-json-example
+    public static String sendRequest(URL url) throws IOException {
+        // https://reqbin.com/req/java/5nqtoxbx/get-json-example
         // https://www.baeldung.com/httpurlconnection-post
         try {
             HttpURLConnection http = (HttpURLConnection) url.openConnection();
@@ -146,7 +152,7 @@ public class HomeController {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            throw new Error("Somethin went wrong while sendig request -> " + url.toString());
+            throw new Error("Something went wrong while sending request -> " + url.toString());
         }
     }
 }
