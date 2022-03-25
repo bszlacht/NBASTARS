@@ -4,7 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 
 import static com.example.NBASTARS.HomeController.*;
@@ -45,6 +44,7 @@ public class PlayerThread extends Thread{
             reb = String.valueOf(statsObj.get("reb"));
         } catch (IOException e) {
             e.printStackTrace();
+            System.out.println("Player Thread Error");
         }
     }
 

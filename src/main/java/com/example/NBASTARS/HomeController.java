@@ -25,8 +25,6 @@ import java.util.Objects;
 public class HomeController {
     private Configuration configuration = new Configuration(Configuration.VERSION_2_3_23);
     public static final String GETPLAYERS = "https://www.balldontlie.io/api/v1/players/?search=";
-    public static final String GETPLAYERSSTATS2020 = "https://www.balldontlie.io/api/v1/season_averages?season=2020&player_ids[]=";
-    public static final String GETPLAYERSSTATS2019 = "https://www.balldontlie.io/api/v1/season_averages?season=2019&player_ids[]=";
 
 
     @GetMapping("/")    // home page
@@ -86,26 +84,38 @@ public class HomeController {
             String pts2 = t2.getPts();
             String ast2 = t2.getAst();
             String reb2 = t2.getReb();
-            model.put("pts", pts1);
-            model.put("ast", ast1);
-            model.put("reb", reb1);
+            if(pts1 == null || ast1 == null || reb1 == null){
+                model.put("pts", "No data");
+                model.put("ast", "No data");
+                model.put("reb", "No data");
+            }else{
+                model.put("pts", pts1);
+                model.put("ast", ast1);
+                model.put("reb", reb1);
+            }
+
 
 
             // Comaprison :
+            String res;
+            if(pts1 == null || ast1 == null || reb1 == null || pts2 == null || ast2 == null || reb2 == null){
+                res = "No data to compare";
+            }else{
+                res = "Comparison = ";
+                if(Float.parseFloat(pts1) > Float.parseFloat(pts2)){
+                    res += "has better points ";
+                }
+                if(Float.parseFloat(ast1) > Float.parseFloat(ast2)){
+                    res += "has better assists ";
+                }
+                if(Float.parseFloat(reb1) > Float.parseFloat(reb2)){
+                    res += "has better rebounds";
+                }
+                if(res.equals("Comparison = ")){
+                    res = "Player worsened in every compared category";
+                }
+            }
 
-            String res = "Comparison = ";
-            if(Float.parseFloat(pts1) > Float.parseFloat(pts2)){
-                res += "has better points ";
-            }
-            if(Float.parseFloat(ast1) > Float.parseFloat(ast2)){
-                res += "has better assists ";
-            }
-            if(Float.parseFloat(reb1) > Float.parseFloat(reb2)){
-                res += "has better rebounds";
-            }
-            if(res.equals("Comparison = ")){
-                res = "Player worsened in every compared category";
-            }
             model.put("res", res);
 
         }
@@ -130,8 +140,6 @@ public class HomeController {
     }
 
     public static String sendRequest(URL url) throws IOException {
-        // https://reqbin.com/req/java/5nqtoxbx/get-json-example
-        // https://www.baeldung.com/httpurlconnection-post
         try {
             HttpURLConnection http = (HttpURLConnection) url.openConnection();
             http.setRequestMethod("GET");
